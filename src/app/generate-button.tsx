@@ -29,15 +29,11 @@ export function GenerateButton({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div className="mt-3">
-      <button
-        onClick={run}
-        disabled={disabled || busy}
-        className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-      >
+    <div className="mt-4">
+      <button onClick={run} disabled={disabled || busy} className="btn-cta">
         {busy ? "…" : "Générer les brouillons dans pointage@"}
       </button>
-      {status && <p className="mt-2 text-sm">{status}</p>}
+      {status && <p className="mt-2 text-[13px] text-apple-secondary">{status}</p>}
     </div>
   );
 }

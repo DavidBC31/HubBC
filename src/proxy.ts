@@ -6,7 +6,8 @@ import type { NextRequest } from "next/server";
 // via getSession() — cf. src/lib/auth.ts.
 
 const SESSION_COOKIE = "justif_session"; // doit matcher src/lib/auth.ts
-const OPEN = ["/api/auth", "/api/cron"]; // accessibles sans session
+// Accessibles sans session : SSO, et les endpoints backend protégés par CRON_SECRET.
+const OPEN = ["/api/auth", "/api/cron", "/api/justificatifs"];
 
 export function proxy(req: NextRequest) {
   // SSO actif uniquement si configuré. En dev non configuré → tout ouvert.
