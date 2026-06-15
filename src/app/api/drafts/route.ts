@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildDrafts } from "@/lib/engine";
 import { getDataset } from "@/lib/sheet";
 import { createDrafts } from "@/lib/gmail";
+import { getSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,9 @@ export const runtime = "nodejs";
  * - confirm=true : crée réellement les brouillons dans pointage@
  */
 export async function POST(req: NextRequest) {
+  if (process.env.AUTH_SECRET && !(await getSession())) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const { date, confirm, limit, test } = await req.json().catch(() => ({}));
   const runDate = date ? new Date(date + "T12:00:00") : new Date();
   const { entries } = await getDataset();

@@ -34,7 +34,7 @@ function loadKey(): { client_email: string; private_key: string } {
 
 function clients() {
   const key = loadKey();
-  const mailbox = process.env.JUSTIF_MAILBOX ?? "azais@bleucitron.net";
+  const mailbox = process.env.JUSTIF_MAILBOX ?? "justif@bleucitron.net";
   const auth = new google.auth.JWT({
     email: key.client_email,
     key: key.private_key,

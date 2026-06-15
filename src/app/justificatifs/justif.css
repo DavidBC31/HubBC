@@ -1,0 +1,165 @@
+/* Design System — Bleu Citron (inspiration Apple / iOS 18, glassmorphisme).
+   Portée : route /justificatifs (outil collaborateur diffusé à part). */
+
+.justif-root {
+  --blue: #1450e2;
+  --blue-hover: #1038b0;
+  --bg: #f5f5f7;
+  --text: #1d1d1f;
+  --text-2: #86868b;
+  --sep: #d2d2d7;
+  --green: #34c759;
+  --orange: #ff9500;
+
+  min-height: 100vh;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.47059;
+  letter-spacing: -0.022em;
+  background: var(--bg);
+  background-image: radial-gradient(
+      ellipse 120% 80% at 15% 10%,
+      rgba(90, 200, 250, 0.18),
+      transparent 50%
+    ),
+    radial-gradient(ellipse 100% 70% at 85% 30%, rgba(0, 113, 227, 0.13), transparent 50%),
+    radial-gradient(ellipse 90% 60% at 50% 90%, rgba(88, 86, 214, 0.1), transparent 50%);
+  background-attachment: fixed;
+}
+
+.justif-wrap {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -0.5px 0 rgba(0, 0, 0, 0.03);
+  padding: 24px;
+}
+
+.j-title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.j-sub {
+  font-size: 14px;
+  color: var(--text-2);
+}
+.j-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.j-input,
+.j-select {
+  width: 100%;
+  font-size: 14px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.7);
+  border: 0.5px solid var(--sep);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.j-input:focus,
+.j-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(20, 80, 226, 0.12);
+}
+.j-input[readonly] {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-2);
+}
+.j-input.err {
+  border-color: var(--orange);
+}
+
+/* CTA principal */
+.j-cta {
+  width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--blue);
+  border: none;
+  border-radius: 9999px;
+  padding: 13px 16px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.1s;
+}
+.j-cta:hover:not(:disabled) {
+  background: var(--blue-hover);
+}
+.j-cta:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.j-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Zone de dépôt de fichier — claire et cliquable */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  cursor: pointer;
+  padding: 28px 20px;
+  border: 1.5px dashed var(--sep);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.4);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.dropzone:hover,
+.dropzone.drag {
+  border-color: var(--blue);
+  background: rgba(20, 80, 226, 0.05);
+}
+.dropzone-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--blue);
+}
+.dropzone-files {
+  margin-top: 10px;
+  font-size: 13px;
+}
+.dropzone-files li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(20, 80, 226, 0.08);
+  color: var(--blue);
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin: 3px;
+}
+
+.j-alert {
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.j-alert.ok {
+  background: rgba(52, 199, 89, 0.12);
+  color: #1b7a36;
+}
+.j-alert.ko {
+  background: rgba(255, 149, 0, 0.14);
+  color: #8a4b00;
+}

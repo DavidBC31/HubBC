@@ -1,11 +1,17 @@
+import { redirect } from "next/navigation";
 import { buildDrafts, selectDue, jourDe } from "@/lib/engine";
 import { getDataset } from "@/lib/sheet";
 import { checkAccess } from "@/lib/gmail";
+import { getSession } from "@/lib/auth";
 import { GenerateButton } from "./generate-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  // Gating SSO : si configuré, exige une session valide (vérif HMAC + domaine).
+  if (process.env.AUTH_SECRET && !(await getSession())) {
+    redirect("/api/auth/google");
+  }
   const { entries, generated_at, count, live, warning } = await getDataset();
   const now = new Date();
   const jour = jourDe(now);

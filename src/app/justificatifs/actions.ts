@@ -6,6 +6,7 @@ import { sendJustificatif, type MailAttachment } from "@/lib/gmail";
 import {
   buildPivotEmail,
   DOC_TYPES,
+  validateMontant,
   type DocType,
   type Submission,
 } from "@/lib/justificatifs";
@@ -55,15 +56,16 @@ export async function submitJustificatif(
   const type = str("type") as DocType;
   if (!DOC_TYPES.some((d) => d.id === type)) return { error: "Type de document invalide." };
   const montant = Number(str("montant").replace(",", "."));
-  if (!Number.isFinite(montant) || montant <= 0) return { error: "Montant invalide." };
+  const montantErr = validateMontant(type, montant); // applique le plafond (ex: téléphone 30 €)
+  if (montantErr) return { error: montantErr };
   const mois = str("mois");
   if (!/^\d{4}-\d{2}$/.test(mois)) return { error: "Mois invalide." };
 
-  const matricule = session ? str("matricule") : str("matricule");
+  // Identité de confiance : la session prime sur les champs du formulaire.
   const nom = session?.nom ?? str("nom");
   const prenom = session?.prenom ?? str("prenom");
   const email = session?.email ?? str("email");
-  if (!matricule || !nom || !email) return { error: "Identité ou matricule manquant." };
+  if (!nom || !email) return { error: "Identité manquante (connexion SSO requise)." };
 
   // Pièces jointes
   const attachments: MailAttachment[] = [];
@@ -79,11 +81,11 @@ export async function submitJustificatif(
   if (attachments.length === 0) return { error: "Joignez au moins une pièce justificative." };
 
   const submission: Submission = {
-    matricule, nom, prenom, email, type, montant, mois,
+    nom, prenom, email, type, montant, mois,
     fichiers: attachments.map((a) => a.filename),
   };
   const { subject, body } = buildPivotEmail(submission);
-  const to = process.env.JUSTIF_MAILBOX ?? "azais@bleucitron.net";
+  const to = process.env.JUSTIF_MAILBOX ?? "justif@bleucitron.net";
 
   try {
     await sendJustificatif({ from: email, to, subject, body, attachments });
