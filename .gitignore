@@ -20,3 +20,7 @@ build/
 .vercel
 /tmp/
 __pycache__/
+
+# sorties générées du nettoyeur d'absences (PII, non versionnées)
+data/absences.json
+data/absences_spaiectacle.tsv
