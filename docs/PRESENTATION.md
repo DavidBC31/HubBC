@@ -80,8 +80,8 @@ relit et les envoie à la main, rien n'est envoyé sans validation humaine.
   collaborateurs.
 - **Deux codes de rubrique paie** (Mobilité douce et Transport en commun) à
   confirmer pour finaliser l'export sPAIEctacle.
-- **Évolutions prévues** : suivi automatique des réponses aux relances, puis
-  intégration de cas particuliers (billetterie tiers).
+- **Prochaine évolution** : le **suivi automatique des réponses aux relances**,
+  pour boucler le cycle sans intervention manuelle.
 
 ---
 
