@@ -6,10 +6,13 @@ import type { Dataset, Entry } from "./types";
 import { normalizeTabs } from "./normalize";
 
 const TABS = {
-  relances: "RELANCES  PIMS A SAISIR", // (2 espaces, tel quel dans le fichier)
-  autonomes: "AUTONOMES  PIMS A SAISIR",
+  relances: "RELANCES / PIMS A SAISIR",
+  autonomes: "AUTONOMES / PIMS A SAISIR",
   billetsTiers: "BILLETS TIERS",
 };
+
+/** Compare deux noms d'onglet sans tenir compte des espaces/ponctuation (« / », doubles espaces…). */
+const normTab = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
 
 function loadKey() {
   const b64 = process.env.GOOGLE_SA_KEY_B64;
@@ -28,20 +31,40 @@ export async function fetchXlsxBuffer(fileId: string): Promise<Buffer> {
     subject: process.env.GMAIL_IMPERSONATE ?? "pointage@bleucitron.net",
   });
   const drive = google.drive({ version: "v3", auth });
-  // Fichier .xlsx uploadé -> téléchargement direct (alt=media).
-  const res = await drive.files.get(
-    { fileId, alt: "media", supportsAllDrives: true },
-    { responseType: "arraybuffer" },
-  );
+  // Deux cas : un Google Sheet natif s'obtient via `export` (conversion xlsx) ;
+  // un .xlsx déjà uploadé via `get?alt=media` (téléchargement direct).
+  const XLSX_MIME =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const meta = await drive.files.get({
+    fileId,
+    fields: "mimeType",
+    supportsAllDrives: true,
+  });
+  const isNativeSheet =
+    meta.data.mimeType === "application/vnd.google-apps.spreadsheet";
+  const res = isNativeSheet
+    ? await drive.files.export(
+        { fileId, mimeType: XLSX_MIME },
+        { responseType: "arraybuffer" },
+      )
+    : await drive.files.get(
+        { fileId, alt: "media", supportsAllDrives: true },
+        { responseType: "arraybuffer" },
+      );
   return Buffer.from(res.data as ArrayBuffer);
 }
 
 type Row = (string | number | boolean | Date | null)[];
 
 function tabRows(wb: XLSX.WorkBook, name: string): Row[] {
-  const ws = wb.Sheets[name];
-  if (!ws) throw new Error(`Onglet introuvable: ${name}`);
-  return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as Row[];
+  // Tolérant aux variantes de nom (slash, espaces multiples) — cf. normTab.
+  const want = normTab(name);
+  const found = wb.SheetNames.find((n) => normTab(n) === want);
+  if (!found) {
+    console.warn(`[sheet] Onglet absent: "${name}" — ignoré (0 ligne).`);
+    return [];
+  }
+  return XLSX.utils.sheet_to_json(wb.Sheets[found], { header: 1, raw: true, defval: null }) as Row[];
 }
 
 /** Snapshot local (data/relances.json) — repli quand Drive indisponible. */

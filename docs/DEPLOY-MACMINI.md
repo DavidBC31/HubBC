@@ -40,7 +40,7 @@ Créer `~/apps/Pointages/.env.local` (jamais commité) :
 # Google service account (délégation domaine)
 GOOGLE_APPLICATION_CREDENTIALS=./.secrets/service-account.json
 GMAIL_IMPERSONATE=pointage@bleucitron.net
-JUSTIF_MAILBOX=justif@bleucitron.net
+JUSTIF_MAILBOX=azais@bleucitron.net
 JUSTIF_DRIVE_FOLDER=15ucT77NBT_30rVagMfpfhZDssmf_NpxU
 
 # Référentiels
@@ -55,12 +55,10 @@ AUTH_HOSTED_DOMAIN=bleucitron.net
 
 # Sécurise les endpoints backend (cron) — METS UN VRAI SECRET
 CRON_SECRET=$(openssl rand -hex 32)
-
-# PIMS (relances)
-PIMS_BASE_URL=...
-PIMS_USERNAME=...
-PIMS_PASSWORD=...
 ```
+
+> Pas de variables PIMS : le logiciel n'expose pas d'API, la saisie y reste
+> manuelle. L'app se limite à la détection des réponses aux relances.
 
 Déposer la clé du service account dans `~/apps/Pointages/.secrets/service-account.json`.
 

@@ -13,9 +13,6 @@ cd "$(dirname "$0")/.."
 get() { grep -E "^$1=" .env.local | head -1 | cut -d= -f2-; }
 
 # Valeurs depuis .env.local
-PIMS_BASE_URL=$(get PIMS_BASE_URL)
-PIMS_USERNAME=$(get PIMS_USERNAME)
-PIMS_PASSWORD=$(get PIMS_PASSWORD)
 GMAIL_IMPERSONATE=$(get GMAIL_IMPERSONATE)
 POINTAGE_SHEET_FILE_ID=$(get POINTAGE_SHEET_FILE_ID)
 AUTH_SECRET=$(get AUTH_SECRET)
@@ -35,9 +32,6 @@ add() { # NAME VALUE ENV
 
 for E in production preview; do
   echo "=== $E ==="
-  add PIMS_BASE_URL          "$PIMS_BASE_URL"          "$E"
-  add PIMS_USERNAME          "$PIMS_USERNAME"          "$E"
-  add PIMS_PASSWORD          "$PIMS_PASSWORD"          "$E"
   add GMAIL_IMPERSONATE      "$GMAIL_IMPERSONATE"      "$E"
   add POINTAGE_SHEET_FILE_ID "$POINTAGE_SHEET_FILE_ID" "$E"
   add CRON_SECRET            "$CRON_SECRET"            "$E"

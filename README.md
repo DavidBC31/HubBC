@@ -29,7 +29,6 @@ cadence par défaut = **lundi** (cadences spécifiques mardi / 1×semaine reconn
 
 | Var | Rôle |
 |---|---|
-| `PIMS_BASE_URL` / `PIMS_USERNAME` / `PIMS_PASSWORD` | API PIMS (phase 2) |
 | `GOOGLE_APPLICATION_CREDENTIALS` (dev) / `GOOGLE_SA_KEY_B64` (prod) | clé service account |
 | `GMAIL_IMPERSONATE` | boîte incarnée (`pointage@bleucitron.net`) |
 | `POINTAGE_SHEET_FILE_ID` | id Drive du doc de suivi |
@@ -51,4 +50,4 @@ npm run dev                        # http://localhost:3000
 - [x] Phase 1 — relances du lundi en brouillons validés
 - [ ] Déploiement Vercel + cron hebdo
 - [x] Phase 2a — détection des réponses entrantes (dashboard, lecture seule)
-- [ ] Phase 2b — push PIMS
+- [x] Phase 2b — ~~push PIMS~~ abandonné : PIMS n'expose pas d'API (saisie manuelle)
