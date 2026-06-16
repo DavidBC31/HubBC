@@ -31,8 +31,8 @@ export const PLAFONDS: Partial<Record<DocType, number>> = {
 export const RUBRIQUE: Record<DocType, { code: string; libelle: string } | null> = {
   TELEPHONE: { code: "Ft50", libelle: "Forfait téléphonique remboursé à 50 %" },
   PASS_NAVIGO: { code: "CNa", libelle: "Carte Navigo autre" },
-  MOBILITE: null, // code rubrique sPAIEctacle à confirmer (forfait mobilité durable)
-  TRANSPORT_COMMUN: null, // code rubrique sPAIEctacle à confirmer
+  MOBILITE: { code: "MOBI", libelle: "Forfait mobilité durable" },
+  TRANSPORT_COMMUN: { code: "CO", libelle: "Carte pastel" },
 };
 
 /** Renvoie un message d'erreur si le montant est invalide pour ce type, sinon null. */
@@ -143,7 +143,6 @@ const CSV_HEADER = [
 /**
  * CSV d'import sPAIEctacle orienté rubrique (séparateur « ; »).
  * `base` = montant déclaré ; `quantite` = 1. Le code rubrique vient de RUBRIQUE.
- * ⚠️ Codes MOBILITE / TRANSPORT_COMMUN encore à confirmer (cf. RUBRIQUE = null).
  */
 export function buildJustificatifsCSV(subs: Submission[]): string {
   const esc = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
