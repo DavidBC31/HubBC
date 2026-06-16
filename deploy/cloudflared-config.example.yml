@@ -1,0 +1,13 @@
+# Config Cloudflare Tunnel — expose le port local 3000 en HTTPS.
+# À copier dans ~/.cloudflared/config.yml puis adapter <user>, <TUNNEL_ID>, le domaine.
+# Pré-requis (cf. docs/DEPLOY-MACMINI.md §5) :
+#   cloudflared tunnel login
+#   cloudflared tunnel create pointages
+#   cloudflared tunnel route dns pointages justif.bleucitron.net
+tunnel: pointages
+credentials-file: /Users/<user>/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: justif.bleucitron.net
+    service: http://localhost:3000
+  - service: http_status:404

@@ -1,0 +1,10 @@
+# Traitements planifiés — remplace les crons Vercel sur l'hébergement Mac Mini.
+# Installer avec : crontab deploy/crontab.example  (ou copier les lignes via `crontab -e`).
+# Remplacer <CRON_SECRET> par la vraie valeur (ou exporter la variable, cf. ci-dessous).
+# Heures en fuseau local de la machine.
+
+# --- Relances hebdomadaires : tous les lundis à 7h00 (crée les brouillons) ---
+0 7 * * 1  curl -fsS -H "Authorization: Bearer <CRON_SECRET>" https://justif.bleucitron.net/api/cron/relances >> ~/apps/Pointages/cron.log 2>&1
+
+# --- Archivage des justificatifs : chaque nuit à 2h00 (range les pièces sur le Drive du mois) ---
+0 2 * * *  curl -fsS -X POST -H "Authorization: Bearer <CRON_SECRET>" -H "Content-Type: application/json" -d '{"archive":true}' https://justif.bleucitron.net/api/justificatifs >> ~/apps/Pointages/cron.log 2>&1
