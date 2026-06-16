@@ -9,6 +9,7 @@
  */
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 import { OAuth2Client } from "google-auth-library";
 
 export const SESSION_COOKIE = "justif_session";
@@ -92,4 +93,18 @@ export async function getSession(): Promise<Identity | null> {
   const c = await cookies();
   const tok = c.get(SESSION_COOKIE)?.value;
   return tok ? verifySession(tok) : null;
+}
+
+/**
+ * Origine publique réelle de la requête. Derrière un reverse-proxy / Cloudflare
+ * Tunnel, Next met l'adresse de bind (localhost:PORT) dans `nextUrl` ; on lit
+ * donc les en-têtes transmis (x-forwarded-host/proto, sinon Host) pour bâtir
+ * les URLs publiques (redirect_uri OAuth, redirections post-login).
+ */
+export function publicOrigin(req: NextRequest): string {
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (!host) return req.nextUrl.origin;
+  const proto =
+    req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  return `${proto}://${host}`;
 }
