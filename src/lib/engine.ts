@@ -23,7 +23,7 @@ function fmtDate(iso: string | null): string {
 }
 
 /** Première adresse exploitable d'une cellule MAIL (souvent plusieurs / des liens). */
-function firstEmail(mail: string): string | null {
+export function firstEmail(mail: string): string | null {
   const tok = mail.split(/[\s,;]+/).find((t) => t.includes("@") && !t.includes("/"));
   return tok ? tok.trim().toLowerCase() : null;
 }

@@ -4,6 +4,7 @@ import { getDataset } from "@/lib/sheet";
 import { checkAccess } from "@/lib/gmail";
 import { getSession } from "@/lib/auth";
 import { GenerateButton } from "./generate-button";
+import { RepliesPanel } from "./replies-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,19 @@ export default async function Home() {
           </div>
           {!access.ok && <p className="mt-2 text-xs text-apple-orange">{access.error}</p>}
           <GenerateButton disabled={!access.ok || drafts.length === 0} />
+        </section>
+
+        {/* Réponses des salles */}
+        <section className="glass-card p-5">
+          <div>
+            <h2 className="text-[18px] font-semibold tracking-tight">Réponses des salles</h2>
+            <p className="mt-0.5 text-[13px] text-apple-secondary">
+              Repère les contacts à relancer qui ont déjà répondu dans pointage@ (lecture
+              seule, rien n&apos;est modifié).
+            </p>
+          </div>
+          {!access.ok && <p className="mt-2 text-xs text-apple-orange">{access.error}</p>}
+          <RepliesPanel disabled={!access.ok} />
         </section>
 
         {/* Brouillons */}

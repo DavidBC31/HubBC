@@ -50,4 +50,5 @@ npm run dev                        # http://localhost:3000
 
 - [x] Phase 1 — relances du lundi en brouillons validés
 - [ ] Déploiement Vercel + cron hebdo
-- [ ] Phase 2 — parsing des réponses entrantes + push PIMS
+- [x] Phase 2a — détection des réponses entrantes (dashboard, lecture seule)
+- [ ] Phase 2b — push PIMS
