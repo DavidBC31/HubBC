@@ -1,0 +1,26 @@
+# secrets — JAMAIS committer
+.env
+.env.local
+.env*.local
+.secrets/
+*.pem
+service-account*.json
+*-d90318653f61.json
+
+# deps / build
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# misc
+.DS_Store
+*.log
+.vercel
+/tmp/
+__pycache__/
+
+# sorties générées du nettoyeur d'absences (PII, non versionnées)
+data/absences.json
+data/absences_spaiectacle.tsv
