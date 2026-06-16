@@ -24,3 +24,6 @@ __pycache__/
 # sorties générées du nettoyeur d'absences (PII, non versionnées)
 data/absences.json
 data/absences_spaiectacle.tsv
+
+# Next.js generated
+next-env.d.ts
