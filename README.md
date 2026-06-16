@@ -51,4 +51,3 @@ npm run dev                        # http://localhost:3000
 - [x] Phase 1 — relances du lundi en brouillons validés
 - [ ] Déploiement Vercel + cron hebdo
 - [ ] Phase 2 — parsing des réponses entrantes + push PIMS
-- [ ] Phase 3 — billets tiers via TAL-API (Aparté)
