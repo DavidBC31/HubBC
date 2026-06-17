@@ -83,11 +83,13 @@ export function buildPivotEmail(s: Submission): { subject: string; body: string 
   const body =
     `Bonjour Azaïs,\n\n` +
     `${s.prenom} ${s.nom} dépose un justificatif pour la paie :\n` +
+    (s.matricule ? `  • Matricule : ${s.matricule}\n` : ``) +
     `  • Type : ${labelOf(s.type)}\n` +
     `  • Montant : ${fmtMontant(s.montant)} €\n` +
     `  • Mois : ${s.mois}\n\n` +
     `Les pièces justificatives sont en pièce jointe.\n\n` +
     `${BLOCK_START}\n` +
+    `matricule: ${s.matricule ?? ""}\n` +
     `nom: ${s.nom}\n` +
     `prenom: ${s.prenom}\n` +
     `email: ${s.email}\n` +

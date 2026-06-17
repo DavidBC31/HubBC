@@ -80,8 +80,19 @@ export async function submitJustificatif(
   }
   if (attachments.length === 0) return { error: "Joignez au moins une pièce justificative." };
 
+  // Résout le matricule (annuaire BCD) pour l'embarquer dans l'email pivot → CSV
+  // sPAIEctacle + nom du fichier archivé. Dégrade proprement : si l'annuaire est
+  // indisponible ou le nom introuvable/ambigu, on envoie sans matricule.
+  let matricule: string | undefined;
+  try {
+    matricule = (await resolveMatricule(nom, prenom))?.matricule;
+  } catch {
+    matricule = undefined;
+  }
+
   const submission: Submission = {
     nom, prenom, email, type, montant, mois,
+    matricule,
     fichiers: attachments.map((a) => a.filename),
   };
   const { subject, body } = buildPivotEmail(submission);
