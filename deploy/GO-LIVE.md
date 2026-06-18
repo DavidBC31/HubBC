@@ -29,9 +29,9 @@ Deux domaines → un seul tunnel/serveur :
 - [ ] Tunnel lancé en service (`cloudflared service install`).
 - [ ] Les deux URLs publiques répondent.
 
-## 5. Console Google OAuth (SSO du dépôt justificatifs)
-- [ ] Redirect URI : `https://justif.bleucitron.app/api/auth/callback`.
-- [ ] JavaScript origin : `https://justif.bleucitron.app`.
+## 5. Console Google OAuth (SSO — protège les deux apps)
+- [ ] Redirect URIs : `https://justif.bleucitron.app/api/auth/callback` **et** `https://pointages.bleucitron.net/api/auth/callback`.
+- [ ] JavaScript origins : `https://justif.bleucitron.app` **et** `https://pointages.bleucitron.net`.
 
 ## 6. Traitements planifiés
 - [ ] `crontab deploy/crontab.example` (après avoir renseigné `<CRON_SECRET>`).

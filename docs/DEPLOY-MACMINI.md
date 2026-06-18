@@ -119,15 +119,19 @@ de la box vers le Mac Mini + IP fixe ou DynDNS. Plus de config réseau.
 
 ## 6. Mettre à jour la console Google OAuth
 
-Le SSO sert le **dépôt des justificatifs** (`justif.bleucitron.app`). Ajouter
-dans le client OAuth (APIs & Services → Credentials) :
+Le SSO protège **les deux** applications (dépôt justificatifs **et** dashboard
+relances). Ajouter dans le client OAuth (APIs & Services → Credentials), pour
+**chaque** domaine :
 
-- **Authorized redirect URIs** : `https://justif.bleucitron.app/api/auth/callback`
-- **Authorized JavaScript origins** : `https://justif.bleucitron.app`
+- **Authorized redirect URIs** :
+  - `https://justif.bleucitron.app/api/auth/callback`
+  - `https://pointages.bleucitron.net/api/auth/callback`
+- **Authorized JavaScript origins** :
+  - `https://justif.bleucitron.app`
+  - `https://pointages.bleucitron.net`
 
 C'est l'URL `https://justif.bleucitron.app/justificatifs` que tu diffuses aux
-collaborateurs. (Si le dashboard relances sur `pointages.bleucitron.net` doit
-aussi exiger une connexion Google, ajoute son callback de la même façon.)
+collaborateurs (sa racine `/` y redirige automatiquement).
 
 ## 7. Planifier les traitements (remplace les crons Vercel)
 

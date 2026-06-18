@@ -21,16 +21,19 @@ But : récupérer Nom / Prénom / Email du collaborateur à la connexion.
 
 ### Liens à autoriser ⚠️ (ta question)
 
-**Authorized redirect URIs** — la route de callback, pour chaque environnement :
+**Authorized redirect URIs** — la route de callback, pour chaque domaine
+(le SSO protège **les deux** applications, dépôt justificatifs **et** dashboard relances) :
 ```
-http://localhost:3000/api/auth/callback                  (dev local)
-https://justif.bleucitron.app/api/auth/callback           (production — dépôt justificatifs)
+http://localhost:3000/api/auth/callback                      (dev local)
+https://justif.bleucitron.app/api/auth/callback               (dépôt justificatifs)
+https://pointages.bleucitron.net/api/auth/callback            (dashboard relances)
 ```
 
 **Authorized JavaScript origins** — l'origine seule (sans chemin) :
 ```
 http://localhost:3000
 https://justif.bleucitron.app
+https://pointages.bleucitron.net
 ```
 
 > Le chemin `/api/auth/callback` est imposé par le code (`src/app/api/auth/callback`). Le `redirect_uri` envoyé à Google est calculé dynamiquement comme `<origin>/api/auth/callback` ; il **doit** figurer à l'identique dans la liste ci-dessus, sinon Google renvoie `redirect_uri_mismatch`.
