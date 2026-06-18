@@ -22,20 +22,23 @@ placeholders `<user>`, `<TUNNEL_ID>`, `<CRON_SECRET>` par les vraies valeurs.
 - [ ] `pm2 status` → `pointages` en ligne ; `curl -I http://localhost:3000/justificatifs` → 307.
 
 ## 4. HTTPS public (Cloudflare Tunnel)
-- [ ] Tunnel créé et DNS routé (cf. DEPLOY-MACMINI.md §5).
-- [ ] `~/.cloudflared/config.yml` copié depuis `deploy/cloudflared-config.example.yml`.
+Deux domaines → un seul tunnel/serveur :
+`justif.bleucitron.app` (dépôt justificatifs) et `pointages.bleucitron.net` (dashboard relances).
+- [ ] Tunnel créé et **les deux** DNS routés (cf. DEPLOY-MACMINI.md §5).
+- [ ] `~/.cloudflared/config.yml` copié depuis `deploy/cloudflared-config.example.yml` (2 hostnames).
 - [ ] Tunnel lancé en service (`cloudflared service install`).
-- [ ] L'URL publique répond et redirige vers Google.
+- [ ] Les deux URLs publiques répondent.
 
-## 5. Console Google OAuth
-- [ ] Redirect URI : `https://justif.bleucitron.net/api/auth/callback`.
-- [ ] JavaScript origin : `https://justif.bleucitron.net`.
+## 5. Console Google OAuth (SSO du dépôt justificatifs)
+- [ ] Redirect URI : `https://justif.bleucitron.app/api/auth/callback`.
+- [ ] JavaScript origin : `https://justif.bleucitron.app`.
 
 ## 6. Traitements planifiés
 - [ ] `crontab deploy/crontab.example` (après avoir renseigné `<CRON_SECRET>`).
 - [ ] Vérifier une exécution dans `~/apps/Pointages/cron.log`.
 
 ## 7. Recette finale
-- [ ] Connexion Google `@bleucitron.net` → formulaire `/justificatifs`, identité pré-remplie.
-- [ ] Dépôt test → mail sur `justif@` → archivage Drive OK.
-- [ ] **Diffuser le lien `https://justif.bleucitron.net/justificatifs`** aux collaborateurs.
+- [ ] Connexion Google `@bleucitron.net` sur `https://justif.bleucitron.app/justificatifs`, identité pré-remplie.
+- [ ] Dépôt test → mail sur `azais@` → archivage Drive OK.
+- [ ] Dashboard relances accessible sur `https://pointages.bleucitron.net`.
+- [ ] **Diffuser le lien `https://justif.bleucitron.app/justificatifs`** aux collaborateurs.

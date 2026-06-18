@@ -88,19 +88,26 @@ Google OAuth refuse le HTTP (sauf `localhost`). Il faut une **URL https stable**
 Pas d'ouverture de port, HTTPS et domaine gérés par Cloudflare, traverse le NAT
 de la box.
 
+Un seul serveur Next.js sert **deux domaines** (mêmes routes, usages différents) :
+`justif.bleucitron.app` (dépôt des justificatifs) et `pointages.bleucitron.net`
+(dashboard des relances). Les deux pointent vers `localhost:3000`.
+
 ```bash
 brew install cloudflared
 cloudflared tunnel login                       # ouvre le navigateur, choisir le domaine
 cloudflared tunnel create pointages
-# Mapper un sous-domaine vers le port local 3000 :
-cloudflared tunnel route dns pointages justif.bleucitron.net
+# Mapper les DEUX domaines vers le port local 3000 :
+cloudflared tunnel route dns pointages justif.bleucitron.app
+cloudflared tunnel route dns pointages pointages.bleucitron.net
 ```
 `~/.cloudflared/config.yml` :
 ```yaml
 tunnel: pointages
 credentials-file: /Users/<user>/.cloudflared/<TUNNEL_ID>.json
 ingress:
-  - hostname: justif.bleucitron.net
+  - hostname: justif.bleucitron.app
+    service: http://localhost:3000
+  - hostname: pointages.bleucitron.net
     service: http://localhost:3000
   - service: http_status:404
 ```
@@ -112,21 +119,26 @@ de la box vers le Mac Mini + IP fixe ou DynDNS. Plus de config réseau.
 
 ## 6. Mettre à jour la console Google OAuth
 
-Une fois le domaine public connu (ex. `https://justif.bleucitron.net`), ajouter
+Le SSO sert le **dépôt des justificatifs** (`justif.bleucitron.app`). Ajouter
 dans le client OAuth (APIs & Services → Credentials) :
 
-- **Authorized redirect URIs** : `https://justif.bleucitron.net/api/auth/callback`
-- **Authorized JavaScript origins** : `https://justif.bleucitron.net`
+- **Authorized redirect URIs** : `https://justif.bleucitron.app/api/auth/callback`
+- **Authorized JavaScript origins** : `https://justif.bleucitron.app`
 
-C'est l'URL `/justificatifs` de ce domaine que tu diffuses aux collaborateurs.
+C'est l'URL `https://justif.bleucitron.app/justificatifs` que tu diffuses aux
+collaborateurs. (Si le dashboard relances sur `pointages.bleucitron.net` doit
+aussi exiger une connexion Google, ajoute son callback de la même façon.)
 
 ## 7. Planifier les traitements (remplace les crons Vercel)
 
 Via `crontab -e`. Exemple — archiver les justificatifs chaque nuit à 2 h :
 ```cron
-0 2 * * *  curl -s -X POST -H "Authorization: Bearer <CRON_SECRET>" -H "Content-Type: application/json" -d '{"archive":true}' https://justif.bleucitron.net/api/justificatifs >> ~/apps/Pointages/cron.log 2>&1
+0 2 * * *  curl -s -X POST -H "Authorization: Bearer <CRON_SECRET>" -H "Content-Type: application/json" -d '{"archive":true}' https://justif.bleucitron.app/api/justificatifs >> ~/apps/Pointages/cron.log 2>&1
 ```
-Adapter pour `/api/cron/relances` selon la cadence des relances.
+Et les relances (côté pointages) le lundi à 7 h :
+```cron
+0 7 * * 1  curl -fsS -H "Authorization: Bearer <CRON_SECRET>" https://pointages.bleucitron.net/api/cron/relances >> ~/apps/Pointages/cron.log 2>&1
+```
 
 ## 8. Mettre à jour l'app après un changement de code
 

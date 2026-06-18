@@ -23,15 +23,14 @@ But : récupérer Nom / Prénom / Email du collaborateur à la connexion.
 
 **Authorized redirect URIs** — la route de callback, pour chaque environnement :
 ```
-http://localhost:3000/api/auth/callback          (dev local)
-https://<domaine-prod>/api/auth/callback          (production)
-https://<preview>.vercel.app/api/auth/callback    (si tu testes sur des preview Vercel)
+http://localhost:3000/api/auth/callback                  (dev local)
+https://justif.bleucitron.app/api/auth/callback           (production — dépôt justificatifs)
 ```
 
 **Authorized JavaScript origins** — l'origine seule (sans chemin) :
 ```
 http://localhost:3000
-https://<domaine-prod>
+https://justif.bleucitron.app
 ```
 
 > Le chemin `/api/auth/callback` est imposé par le code (`src/app/api/auth/callback`). Le `redirect_uri` envoyé à Google est calculé dynamiquement comme `<origin>/api/auth/callback` ; il **doit** figurer à l'identique dans la liste ci-dessus, sinon Google renvoie `redirect_uri_mismatch`.
