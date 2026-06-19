@@ -1,19 +1,31 @@
-# Config Cloudflare Tunnel — expose le port local 3000 en HTTPS.
+# Config Cloudflare Tunnel — exemple MULTI-PROJETS du Mac Studio.
 # À copier dans ~/.cloudflared/config.yml puis adapter <user>, <TUNNEL_ID>.
-# Un seul serveur Next.js, DEUX domaines (même app, routes différentes) :
-#   justif.bleucitron.app      -> dépôt des justificatifs (/justificatifs)
-#   pointages.bleucitron.net   -> dashboard des relances de pointages (/)
-# Pré-requis (cf. docs/DEPLOY-MACMINI.md §5) :
-#   cloudflared tunnel login
-#   cloudflared tunnel create pointages
-#   cloudflared tunnel route dns pointages justif.bleucitron.app
-#   cloudflared tunnel route dns pointages pointages.bleucitron.net
-tunnel: pointages
+#
+# Le Mac Studio héberge plusieurs projets indépendants, chacun sur son port et
+# son sous-domaine, derrière UN seul tunnel. HubBC (ce dépôt) = le projet
+# « justificatifs », domaine justif.bleucitron.app, port 3002.
+#
+# Plan des ports (cf. docs/DEPLOY-MACSTUDIO.md) :
+#   3000 hub.bleucitron.app       portail hub
+#   3001 pointages.bleucitron.app projet relances (~/Projets/pointages)
+#   3002 justif.bleucitron.app    HubBC / justificatifs (~/Projets/HubBC)  <-- ce dépôt
+#   3003 findash.bleucitron.app   findash
+tunnel: <TUNNEL_ID>
 credentials-file: /Users/<user>/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
+  - hostname: hub.bleucitron.app
+    service: http://localhost:3000
+  - hostname: pointages.bleucitron.app
+    service: http://localhost:3001
   - hostname: justif.bleucitron.app
-    service: http://localhost:3000
-  - hostname: pointages.bleucitron.net
-    service: http://localhost:3000
+    service: http://localhost:3002
+    originRequest:
+      # Présente le vrai hostname public à l'app. Sans ça elle voit localhost:3002
+      # → mauvais redirect_uri OAuth et la redirection par domaine du proxy
+      # (justif -> /justificatifs) ne se déclenche pas. Cf. src/proxy.ts.
+      httpHostHeader: justif.bleucitron.app
+  - hostname: findash.bleucitron.app
+    service: http://localhost:3003
+  # Catch-all obligatoire en dernier
   - service: http_status:404
