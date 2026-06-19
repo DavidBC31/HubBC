@@ -167,3 +167,31 @@ Affiche les onglets du classeur et le nombre de lignes. Utile pour vérifier la 
 - [ ] Connexion Google `@bleucitron.net` → identité pré-remplie sur le formulaire
 - [ ] Dépôt test → mail reçu sur `azais@bleucitron.net` → archivage Drive OK → CSV exportable
 - [ ] Machine ne se met pas en veille : `pmset -g | grep sleep`
+
+## 11. Dépannage — « justif.bleucitron.app affiche les relances »
+
+Symptôme : sur `https://justif.bleucitron.app/` on voit le dashboard des
+relances au lieu d'être redirigé vers le formulaire `/justificatifs`.
+
+La redirection par domaine du proxy se base sur le **host** reçu par le serveur.
+Derrière le tunnel, le serveur expose un en-tête de diagnostic `x-justif-host`
+qui indique le host réellement vu. Diagnostiquer :
+
+```bash
+curl -sI https://justif.bleucitron.app/ | grep -i -E 'HTTP/|location|x-justif-host'
+```
+
+Interprétation :
+
+- **`HTTP/2 307` + `location: …/justificatifs`** → tout est bon (vide le cache
+  du navigateur si tu vois encore l'ancienne page : `Cmd+Shift+R`).
+- **`x-justif-host: justif.bleucitron.app` mais pas de 307** → le code déployé
+  est ancien. Sur le Mac Studio : `cd ~/Projets/HubBC && ./deploy/update.sh`,
+  puis `git log --oneline -1` doit montrer le dernier commit.
+- **`x-justif-host: localhost`** (ou vide) → le tunnel ne transmet pas le bon
+  host. Vérifier que `~/.cloudflared/config.yml` mappe bien `hostname:
+  justif.bleucitron.app` (pas une règle attrape-tout), et que cloudflared a été
+  redémarré après modif : `cloudflared service restart` (ou `pm2 restart` si
+  lancé via pm2). cloudflared préserve le Host d'origine par défaut ; ne pas
+  ajouter d'`httpHostHeader` dans la config (cela écraserait le host pour les
+  deux domaines).

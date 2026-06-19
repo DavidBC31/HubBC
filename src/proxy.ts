@@ -20,7 +20,9 @@ const OPEN = ["/api/auth", "/api/cron", "/api/justificatifs"];
 const JUSTIF_HOSTS = new Set(["justif.bleucitron.app"]);
 
 function publicOrigin(req: NextRequest): { origin: string; host: string } {
-  const raw = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").toLowerCase();
+  // x-forwarded-host peut être une liste « a, b » (chaîne de proxys) → on prend le 1er.
+  const fwd = (req.headers.get("x-forwarded-host") ?? "").split(",")[0].trim();
+  const raw = (fwd || req.headers.get("host") || "").toLowerCase();
   const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
   return {
     origin: raw ? `${proto}://${raw}` : req.nextUrl.origin,
@@ -32,22 +34,30 @@ export function proxy(req: NextRequest) {
   const { origin, host } = publicOrigin(req);
   const { pathname } = req.nextUrl;
 
+  // En-tête de diagnostic : permet de vérifier d'un `curl -sI` quel host le
+  // serveur a réellement reçu derrière le tunnel (si la redirection par domaine
+  // ne se déclenche pas — cf. docs/DEPLOY-MACSTUDIO.md §Dépannage).
+  const tag = (res: NextResponse) => {
+    res.headers.set("x-justif-host", host || "(vide)");
+    return res;
+  };
+
   // 1) Atterrissage par domaine : justif.* -> formulaire de dépôt.
   if (JUSTIF_HOSTS.has(host) && pathname === "/") {
-    return NextResponse.redirect(`${origin}/justificatifs`);
+    return tag(NextResponse.redirect(`${origin}/justificatifs`));
   }
 
   // 2) SSO actif uniquement si configuré. En dev non configuré → tout ouvert.
-  if (!process.env.AUTH_SECRET) return NextResponse.next();
-  if (OPEN.some((p) => pathname.startsWith(p))) return NextResponse.next();
+  if (!process.env.AUTH_SECRET) return tag(NextResponse.next());
+  if (OPEN.some((p) => pathname.startsWith(p))) return tag(NextResponse.next());
 
   if (!req.cookies.has(SESSION_COOKIE)) {
     if (pathname.startsWith("/api")) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      return tag(NextResponse.json({ error: "unauthorized" }, { status: 401 }));
     }
-    return NextResponse.redirect(`${origin}/api/auth/google`);
+    return tag(NextResponse.redirect(`${origin}/api/auth/google`));
   }
-  return NextResponse.next();
+  return tag(NextResponse.next());
 }
 
 export const config = {
