@@ -13,7 +13,7 @@ export const runtime = "nodejs";
  * - confirm=true : crée réellement les brouillons dans pointage@
  */
 export async function POST(req: NextRequest) {
-  if (process.env.AUTH_SECRET && !(await getSession())) {
+  if (process.env.SSO_SECRET && !(await getSession())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { date, confirm, limit, test } = await req.json().catch(() => ({}));

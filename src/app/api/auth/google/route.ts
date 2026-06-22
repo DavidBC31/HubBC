@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authUrl, isConfigured, publicOrigin } from "@/lib/auth";
+import { publicOrigin } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-/** Démarre le flow SSO Google : redirige vers l'écran de consentement. */
+// Le flow OAuth est géré par le hub. On redirige directement vers hub.bleucitron.app
+// en passant l'URL courante en paramètre `from` pour le retour post-login.
+const HUB_URL = process.env.HUB_URL ?? "https://hub.bleucitron.app";
+
 export async function GET(req: NextRequest) {
-  if (!isConfigured()) {
-    return NextResponse.json({ error: "SSO Google non configuré (AUTH_GOOGLE_ID/SECRET/AUTH_SECRET)." }, { status: 503 });
-  }
-  const redirectUri = `${publicOrigin(req)}/api/auth/callback`;
-  return NextResponse.redirect(authUrl(redirectUri));
+  const from = encodeURIComponent(`${publicOrigin(req)}/justificatifs`);
+  return NextResponse.redirect(`${HUB_URL}?from=${from}`);
 }

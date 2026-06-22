@@ -12,7 +12,7 @@ export const maxDuration = 300;
  * (lecture seule de pointage@). Ne modifie rien. Protégé par la session SSO.
  */
 export async function GET(req: NextRequest) {
-  if (process.env.AUTH_SECRET && !(await getSession())) {
+  if (process.env.SSO_SECRET && !(await getSession())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const days = Number(new URL(req.url).searchParams.get("days")) || 30;

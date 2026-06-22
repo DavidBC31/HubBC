@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE, publicOrigin } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-/** Déconnexion : supprime le cookie de session. */
-export async function GET(req: NextRequest) {
-  const res = NextResponse.redirect(`${publicOrigin(req)}/justificatifs`);
-  res.cookies.delete(SESSION_COOKIE);
-  return res;
+// bc_session est posé sur domain=.bleucitron.app par le hub.
+// Seul le hub peut le supprimer proprement : on redirige vers son endpoint logout.
+const HUB_URL = process.env.HUB_URL ?? "https://hub.bleucitron.app";
+
+export async function GET() {
+  return NextResponse.redirect(`${HUB_URL}/api/auth/logout`);
 }

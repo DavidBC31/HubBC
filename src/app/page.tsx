@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   // Gating SSO : si configuré, exige une session valide (vérif HMAC + domaine).
-  if (process.env.AUTH_SECRET && !(await getSession())) {
+  if (process.env.SSO_SECRET && !(await getSession())) {
     redirect("/api/auth/google");
   }
   const { entries, generated_at, count, live, warning } = await getDataset();
