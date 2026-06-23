@@ -16,6 +16,40 @@ const ID_COLS = ["matricule", "(nom)", "(prenom)", "nom", "prenom"];
 export const MALADIE_FAMILY = ["AbMa", "AbMaP", "AbMaT"];
 export const MALADIE_TARGET = "AbMa";
 
+// Codes numériques internes Lucca -> abréviation sPAIEctacle (fourni par le métier,
+// 2026-06). Selon la config d'export, les colonnes peuvent porter ces codes plutôt
+// que l'abréviation. Plusieurs codes peuvent viser la même abréviation (millésimes
+// de CP/RTT, sous-types maladie) : ils sont alors fusionnés dans la même colonne.
+export const LUCCA_CODE_MAP: Record<string, string> = {
+  // Congés payés (par millésime)
+  "1124": "CPr", "1125": "CPr", "1126": "CPr",
+  // RTT (par millésime)
+  "1224": "RTT", "1225": "RTT", "1226": "RTT",
+  // JRS (par millésime)
+  "1325": "JRS", "1326": "JRS",
+  // Maladies & accidents
+  "5": "AbMa",  // Maladie avec maintien
+  "7": "AbMa",  // Maladie sans maintien
+  "6": "AbMaP", // Maladie professionnelle
+  "1": "AbMaT", // Accident de trajet
+  "2": "AbMaT", // Accident de travail
+  // Autres absences
+  "18": "AbJo", // Absence à justifier
+  "21": "AbJo", // Absence injustifiée
+};
+
+// Colonnes de sortie sPAIEctacle, dans l'ordre attendu à l'import (= en-tête
+// observé des exports Lucca). Chaque type a une colonne quantité CODE et une
+// colonne libellé/dates CODE/L.
+export const SPCT_TYPES = ["CPr", "AbMa", "AbMaP", "AbJo", "AbMaT", "RTT", "JRS"];
+
+/** En-tête brut d'une colonne de type -> abréviation sPAIEctacle.
+ *  Code numérique Lucca connu -> mappé ; sinon renvoyé tel quel (déjà une abréviation). */
+function toSpaiectacle(raw: string): string {
+  const r = raw.trim();
+  return LUCCA_CODE_MAP[r] ?? r;
+}
+
 export interface CleanStats {
   lignesEntree: number;
   collaborateurs: number;
@@ -101,16 +135,29 @@ export function cleanAbsences(text: string, collapseMaladie = true): CleanResult
     );
   }
 
-  // code brut -> [idx quantité, idx dates|null]
-  const typeCols = new Map<string, [number, number | null]>();
+  // Colonnes de type en entrée -> abréviation sPAIEctacle (+ index quantité et /L).
+  // Gère les en-têtes en abréviations (CPr…) comme en codes Lucca (1124, 5…).
+  const inputCols: { qi: number; li: number | null; abbr: string }[] = [];
+  const ignored = new Set<string>();
   header.forEach((h, i) => {
     if (ID_COLS.includes(h) || isLabelCol(h)) return;
+    const abbr = toSpaiectacle(h);
+    if (!SPCT_TYPES.includes(abbr)) {
+      ignored.add(h); // type hors périmètre paie -> ignoré (comme le mapping métier)
+      return;
+    }
     const li = header.indexOf(h + "/L");
-    typeCols.set(h, [i, li === -1 ? null : li]);
+    inputCols.push({ qi: i, li: li === -1 ? null : li, abbr });
   });
-  if (typeCols.size === 0) {
-    warnings.push("Aucune colonne de type d'absence reconnue (CPr, AbMa, RTT, JRS…).");
+  if (inputCols.length === 0) {
+    warnings.push("Aucune colonne de type d'absence reconnue (CPr/1124, AbMa/5, RTT…).");
   }
+  if (ignored.size > 0) {
+    warnings.push(`Colonne(s) de type non gérée(s), ignorée(s) : ${[...ignored].join(", ")}.`);
+  }
+
+  // Clé de bucket = abréviation après regroupement maladie éventuel.
+  const tgtOf = (abbr: string) => remapCode(abbr, collapseMaladie);
 
   const groups = new Map<string, Group>();
   const order: string[] = [];
@@ -121,9 +168,9 @@ export function cleanAbsences(text: string, collapseMaladie = true): CleanResult
     let g = groups.get(mat);
     if (!g) {
       const types = new Map<string, Bucket>();
-      for (const code of typeCols.keys()) {
-        const tgt = remapCode(code, collapseMaladie);
-        if (!types.has(tgt)) types.set(tgt, { qty: 0, dates: [] });
+      for (const t of SPCT_TYPES) {
+        const k = tgtOf(t);
+        if (!types.has(k)) types.set(k, { qty: 0, dates: [] });
       }
       g = {
         matricule: mat,
@@ -138,34 +185,42 @@ export function cleanAbsences(text: string, collapseMaladie = true): CleanResult
     g.rowsFusionnees += 1;
     if (!g.nom && r[1]) g.nom = r[1].trim();
     if (!g.prenom && r[2]) g.prenom = r[2].trim();
-    for (const [code, [qi, li]] of typeCols) {
-      const tgt = remapCode(code, collapseMaladie);
-      const bucket = g.types.get(tgt)!;
+    for (const { qi, li, abbr } of inputCols) {
       const q = parseQty(r[qi] ?? "");
+      // La date/libellé n'est retenu·e que s'il y a réellement une quantité pour
+      // ce type sur cette ligne. Indispensable au format Lucca verbeux, où une
+      // cellule « vide » est en fait un gabarit non vide
+      // (« Prise(s) de  Maladie entre le  et le ») qu'il ne faut pas concaténer.
+      if (!q) continue;
+      const bucket = g.types.get(tgtOf(abbr))!;
+      bucket.qty += q;
       const d = li !== null && r[li] ? r[li].trim() : "";
-      if (q) bucket.qty += q;
       if (d) bucket.dates.push(d);
     }
   }
 
+  // Sortie canonique : colonnes sPAIEctacle dans l'ordre attendu, quel que soit
+  // l'ordre/format des colonnes d'entrée.
+  const outHeader = ["matricule", "(nom)", "(prenom)"];
+  for (const t of SPCT_TYPES) outHeader.push(t, `${t}/L`);
+
   const rows: string[][] = order.map((mat) => {
     const g = groups.get(mat)!;
     const line = [g.matricule, g.nom, g.prenom];
-    for (const h of header.slice(3)) {
-      const code = isLabelCol(h) ? h.slice(0, -2) : h;
-      const tgt = remapCode(code, collapseMaladie);
-      if (tgt !== code) {
-        line.push(""); // colonne d'une famille regroupée, non cible -> vidée
+    for (const t of SPCT_TYPES) {
+      const k = tgtOf(t);
+      if (k !== t) {
+        line.push("", ""); // type d'une famille regroupée, non cible -> colonnes vidées
         continue;
       }
-      const bucket = g.types.get(tgt)!;
-      line.push(isLabelCol(h) ? bucket.dates.join(", ") : fmtQty(bucket.qty));
+      const bucket = g.types.get(k)!;
+      line.push(fmtQty(bucket.qty), bucket.dates.join(", "));
     }
     return line;
   });
 
   return {
-    header,
+    header: outHeader,
     rows,
     stats: {
       lignesEntree: body.filter((r) => (r[0] ?? "").trim()).length,

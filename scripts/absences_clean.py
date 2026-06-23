@@ -36,33 +36,33 @@ import csv
 import json
 import datetime
 
-# Correspondance officielle (Google Sheet « Correspondance Lucca x Spaiectacle »).
-# Source de vérité — DIVERGE du mapping inline du CdC SI-PRO16.2 (cf. README/notes).
-# Sert au cas où un export Lucca arriverait avec les libellés bruts plutôt que les
-# colonnes déjà mappées. "" / None => ne pas exporter.
-MAPPING_LUCCA_SPAIECTACLE = {
-    "Accident de trajet": None,
-    "Accident de travail": None,
-    "Invalidité 1ère catégorie": None,
-    "Invalidité 2ème catégorie": None,
-    "Maladie avec maintien": "AbMaP",
-    "Maladie professionnelle": "AbMaT",
-    "Maladie sans maintien": "AbMa",
-    "Maternité": "AbMaT",
-    "Paternité": "AbMaT",
-    "Absence autorisée non payée": "AbJo",
-    "Absence autorisée payée": None,
-    "Absence injustifiée": "AbJo",
-    "Congé parental": None,
-    "Congé sans solde": "AbJo",
-    "Ecole": None,
-    "Mi-temps thérapeutique": None,
-    "Récupération": None,
-    "Solde de tout compte": None,
-    "Congés Payés": "CPr",
-    "RTT": "RTT",
-    "JRS": "JRS",
+# Codes numériques internes Lucca -> abréviation sPAIEctacle (fourni par le métier,
+# 2026-06). Selon la config d'export, les colonnes peuvent porter ces codes plutôt
+# que l'abréviation. Plusieurs codes peuvent viser la même abréviation (millésimes
+# CP/RTT, sous-types maladie) : ils sont fusionnés dans la même colonne de sortie.
+LUCCA_CODE_MAP = {
+    "1124": "CPr", "1125": "CPr", "1126": "CPr",      # Congés payés (par millésime)
+    "1224": "RTT", "1225": "RTT", "1226": "RTT",      # RTT (par millésime)
+    "1325": "JRS", "1326": "JRS",                      # JRS (par millésime)
+    "5": "AbMa",   # Maladie avec maintien
+    "7": "AbMa",   # Maladie sans maintien
+    "6": "AbMaP",  # Maladie professionnelle
+    "1": "AbMaT",  # Accident de trajet
+    "2": "AbMaT",  # Accident de travail
+    "18": "AbJo",  # Absence à justifier
+    "21": "AbJo",  # Absence injustifiée
 }
+
+# Colonnes de sortie sPAIEctacle, dans l'ordre attendu à l'import (= en-tête observé
+# des exports Lucca). Chaque type a une colonne quantité CODE et une colonne CODE/L.
+SPCT_TYPES = ("CPr", "AbMa", "AbMaP", "AbJo", "AbMaT", "RTT", "JRS")
+
+
+def to_spaiectacle(raw: str) -> str:
+    """En-tête de colonne -> abréviation sPAIEctacle (code Lucca mappé, sinon inchangé)."""
+    r = (raw or "").strip()
+    return LUCCA_CODE_MAP.get(r, r)
+
 
 # Colonnes d'identité (ne sont pas des types d'absence).
 ID_COLS = ("matricule", "(nom)", "(prenom)", "nom", "prenom")
@@ -107,14 +107,17 @@ def fmt_qty(x: float) -> str:
 
 def merge(rows, header):
     """Fusionne les lignes par matricule. Retourne (lignes_fusionnées, stats)."""
-    # Indices des colonnes de type : code -> (idx_qty, idx_dates)
-    type_cols = {}
+    # Colonnes de type en entrée -> abréviation sPAIEctacle (+ index qty et /L).
+    # Gère les en-têtes en abréviations (CPr…) comme en codes Lucca (1124, 5…).
+    input_cols = []  # liste de (qi, li|None, abbr)
     for i, h in enumerate(header):
         if h in ID_COLS or is_label_col(h):
             continue
-        code = h
-        lbl_idx = header.index(code + "/L") if (code + "/L") in header else None
-        type_cols[code] = (i, lbl_idx)
+        abbr = to_spaiectacle(h)
+        if abbr not in SPCT_TYPES:
+            continue  # type hors périmètre paie -> ignoré
+        li = header.index(h + "/L") if (h + "/L") in header else None
+        input_cols.append((i, li, abbr))
 
     groups = {}          # matricule -> agrégat
     order = []           # préserve l'ordre d'apparition
@@ -127,8 +130,8 @@ def merge(rows, header):
                 "matricule": mat,
                 "nom": (r[1] if len(r) > 1 else "").strip(),
                 "prenom": (r[2] if len(r) > 2 else "").strip(),
-                # buckets indexés par code APRÈS remap (maladie regroupée)
-                "types": {remap_code(c): {"qty": 0.0, "dates": []} for c in type_cols},
+                # buckets indexés par abréviation APRÈS remap (maladie regroupée)
+                "types": {remap_code(t): {"qty": 0.0, "dates": []} for t in SPCT_TYPES},
                 "rows_fusionnees": 0,
             }
             order.append(mat)
@@ -139,32 +142,34 @@ def merge(rows, header):
             g["nom"] = (r[1] or "").strip()
         if not g["prenom"] and len(r) > 2:
             g["prenom"] = (r[2] or "").strip()
-        for code, (qi, li) in type_cols.items():
-            tgt = remap_code(code)
+        for qi, li, abbr in input_cols:
             q = parse_qty(r[qi] if qi < len(r) else "")
+            # Le libellé/dates n'est retenu que s'il y a réellement une quantité :
+            # au format Lucca verbeux une cellule « vide » est un gabarit non vide
+            # (« Prise(s) de  Maladie entre le  et le ») à ne pas concaténer.
+            if not q:
+                continue
+            tgt = remap_code(abbr)
+            g["types"][tgt]["qty"] += q
             d = (r[li].strip() if (li is not None and li < len(r) and r[li]) else "")
-            if q:
-                g["types"][tgt]["qty"] += q
             if d:
                 g["types"][tgt]["dates"].append(d)
 
-    # Reconstruit les lignes au format de sortie identique à l'entrée
-    out = [header]
+    # Sortie canonique : colonnes sPAIEctacle dans l'ordre attendu.
+    out_header = ["matricule", "(nom)", "(prenom)"]
+    for t in SPCT_TYPES:
+        out_header += [t, t + "/L"]
+    out = [out_header]
     for mat in order:
         g = groups[mat]
         line = [g["matricule"], g["nom"], g["prenom"]]
-        # On régénère selon l'ordre exact du header
-        for h in header[3:]:
-            code = h[:-2] if is_label_col(h) else h
-            tgt = remap_code(code)
-            # Colonne d'une famille regroupée mais qui n'est pas la cible -> vidée
-            if tgt != code:
-                line.append("")
+        for t in SPCT_TYPES:
+            tgt = remap_code(t)
+            if tgt != t:  # type d'une famille regroupée, non cible -> vidé
+                line += ["", ""]
                 continue
-            if is_label_col(h):
-                line.append(", ".join(g["types"][tgt]["dates"]))
-            else:
-                line.append(fmt_qty(g["types"][tgt]["qty"]))
+            line.append(fmt_qty(g["types"][tgt]["qty"]))
+            line.append(", ".join(g["types"][tgt]["dates"]))
         out.append(line)
 
     stats = {
@@ -172,7 +177,7 @@ def merge(rows, header):
         "collaborateurs": len(order),
         "fusions": sum(1 for m in order if groups[m]["rows_fusionnees"] > 1),
     }
-    return out, groups, order, stats, type_cols
+    return out, groups, order, stats, input_cols
 
 
 def main():

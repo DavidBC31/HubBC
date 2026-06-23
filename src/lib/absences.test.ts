@@ -84,6 +84,69 @@ describe("cleanAbsences — regroupement maladie", () => {
   });
 });
 
+describe("codes numériques Lucca → abréviation sPAIEctacle", () => {
+  it("mappe les codes et fusionne les millésimes vers une seule colonne", () => {
+    // 1124+1125 -> CPr ; 2 (accident travail) -> AbMaT -> AbMa (collapse) ; 1225 -> RTT
+    const H = ["matricule", "(nom)", "(prenom)", "1124", "1124/L", "1125", "1125/L", "2", "2/L", "1225", "1225/L"];
+    const r = (m: string, cells: Record<string, string>) => {
+      const a = H.map(() => "");
+      a[0] = m; a[1] = "NUM"; a[2] = "T";
+      for (const [k, v] of Object.entries(cells)) a[H.indexOf(k)] = v;
+      return a.join("\t");
+    };
+    const res = cleanAbsences(
+      [
+        H.join("\t"),
+        r("z1", { "1124": "1", "1124/L": "01/01 01/01" }),
+        r("z1", { "1125": "2", "1125/L": "02/01 03/01" }),
+        r("z1", { "2": "1", "2/L": "10/01 10/01" }),
+        r("z1", { "1225": "0.5", "1225/L": "15/01 15/01" }),
+      ].join("\n"),
+    );
+    expect(out(res, "z1", "CPr")).toBe("3");
+    expect(out(res, "z1", "CPr/L")).toBe("01/01 01/01, 02/01 03/01");
+    expect(out(res, "z1", "AbMa")).toBe("1"); // accident travail regroupé
+    expect(out(res, "z1", "RTT")).toBe("0.5");
+    expect(res.warnings).toEqual([]);
+  });
+
+  it("sort toujours les colonnes sPAIEctacle canoniques, dans l'ordre", () => {
+    const res = cleanAbsences(tsv(row("A1", "X", "Y", { CPr: "1" })));
+    expect(res.header).toEqual([
+      "matricule", "(nom)", "(prenom)",
+      "CPr", "CPr/L", "AbMa", "AbMa/L", "AbMaP", "AbMaP/L",
+      "AbJo", "AbJo/L", "AbMaT", "AbMaT/L", "RTT", "RTT/L", "JRS", "JRS/L",
+    ]);
+  });
+});
+
+describe("format Lucca verbeux (cellules vides = gabarit)", () => {
+  it("ignore les gabarits vides et ne garde que les libellés des absences réelles", () => {
+    const H = ["matricule", "(nom)", "(prenom)", "CPr", "CPr/L", "AbMa", "AbMa/L", "RTT", "RTT/L"];
+    const r = (cells: Record<string, string>) => {
+      const a = H.map(() => "");
+      a[0] = "ros3"; a[1] = "ROUCH"; a[2] = "Shanti";
+      // /L par défaut = gabarit "vide" non vide, comme Lucca
+      a[H.indexOf("CPr/L")] = "Prise(s) de  CP entre le  et le ";
+      a[H.indexOf("AbMa/L")] = "Prise(s) de  Maladie entre le  et le ";
+      a[H.indexOf("RTT/L")] = "Prise(s) de  RTT entre le  et le ";
+      for (const [k, v] of Object.entries(cells)) a[H.indexOf(k)] = v;
+      return a.join("\t");
+    };
+    const res = cleanAbsences(
+      [
+        H.join("\t"),
+        r({ CPr: "1", "CPr/L": "Prise(s) de 1 CP entre le 15/04 et le 15/04" }),
+        r({ RTT: "1", "RTT/L": "Prise(s) de 1 RTT entre le 16/04 et le 16/04" }),
+      ].join("\n"),
+    );
+    expect(out(res, "ros3", "CPr/L")).toBe("Prise(s) de 1 CP entre le 15/04 et le 15/04");
+    expect(out(res, "ros3", "RTT/L")).toBe("Prise(s) de 1 RTT entre le 16/04 et le 16/04");
+    expect(out(res, "ros3", "AbMa/L")).toBe(""); // aucun gabarit vide concaténé
+    expect(out(res, "ros3", "AbMa")).toBe("");
+  });
+});
+
 describe("parsing & garde-fous", () => {
   it("détecte le séparateur (tab, point-virgule, virgule)", () => {
     expect(detectDelimiter("a\tb\tc")).toBe("\t");
