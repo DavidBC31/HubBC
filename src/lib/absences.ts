@@ -26,6 +26,7 @@ export interface CleanResult {
   header: string[];
   rows: string[][];
   stats: CleanStats;
+  warnings: string[];
 }
 
 const isLabelCol = (name: string) => name.endsWith("/L");
@@ -46,13 +47,29 @@ function fmtQty(x: number): string {
   return Number.isInteger(x) ? String(x) : String(x);
 }
 
-/** Découpe un TSV (gère le BOM et les fins de ligne CRLF/LF). */
+/** Découpe un texte délimité en lignes de cellules.
+ *
+ * Lucca exporte en TSV (tabulations), mais selon la config d'export on peut
+ * recevoir du CSV `;` (Excel FR) ou `,`. On détecte le séparateur sur la ligne
+ * d'en-tête (le plus fréquent l'emporte, tab prioritaire à égalité). Gère le BOM
+ * et les fins de ligne CRLF/LF. Les fichiers .xlsx binaires sont convertis en
+ * texte tabulé en amont (cf. cleaner.tsx, SheetJS) puis passent ici.
+ */
+export function detectDelimiter(headerLine: string): "\t" | ";" | "," {
+  const count = (ch: string) => headerLine.split(ch).length - 1;
+  const tabs = count("\t");
+  const semis = count(";");
+  const commas = count(",");
+  if (tabs >= semis && tabs >= commas) return "\t";
+  return semis >= commas ? ";" : ",";
+}
+
 export function parseTSV(text: string): string[][] {
   const clean = text.replace(/^﻿/, "");
-  return clean
-    .split(/\r?\n/)
-    .filter((line) => line.length > 0)
-    .map((line) => line.split("\t"));
+  const lines = clean.split(/\r?\n/).filter((line) => line.length > 0);
+  if (lines.length === 0) return [];
+  const delim = detectDelimiter(lines[0]);
+  return lines.map((line) => line.split(delim));
 }
 
 interface Bucket {
@@ -69,9 +86,20 @@ interface Group {
 
 export function cleanAbsences(text: string, collapseMaladie = true): CleanResult {
   const all = parseTSV(text);
-  if (all.length === 0) return { header: [], rows: [], stats: { lignesEntree: 0, collaborateurs: 0, fusions: 0 } };
+  if (all.length === 0) {
+    return { header: [], rows: [], stats: { lignesEntree: 0, collaborateurs: 0, fusions: 0 }, warnings: [] };
+  }
   const header = all[0];
   const body = all.slice(1);
+  const warnings: string[] = [];
+
+  // Garde-fou : la 1re colonne doit être le matricule (clé de fusion). Sinon le
+  // fichier n'est pas un export Lucca attendu et le résultat serait faux.
+  if ((header[0] ?? "").trim().toLowerCase() !== "matricule") {
+    warnings.push(
+      `Première colonne « ${header[0] ?? ""} » au lieu de « matricule » : vérifie que c'est bien un export Lucca.`,
+    );
+  }
 
   // code brut -> [idx quantité, idx dates|null]
   const typeCols = new Map<string, [number, number | null]>();
@@ -80,6 +108,9 @@ export function cleanAbsences(text: string, collapseMaladie = true): CleanResult
     const li = header.indexOf(h + "/L");
     typeCols.set(h, [i, li === -1 ? null : li]);
   });
+  if (typeCols.size === 0) {
+    warnings.push("Aucune colonne de type d'absence reconnue (CPr, AbMa, RTT, JRS…).");
+  }
 
   const groups = new Map<string, Group>();
   const order: string[] = [];
@@ -141,6 +172,7 @@ export function cleanAbsences(text: string, collapseMaladie = true): CleanResult
       collaborateurs: order.length,
       fusions: order.filter((m) => groups.get(m)!.rowsFusionnees > 1).length,
     },
+    warnings,
   };
 }
 

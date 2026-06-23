@@ -42,12 +42,19 @@ comment les tester.
 exigé par sPAIEctacle, sans manipulation Excel.
 
 ### Comment ça marche
-1. J'exporte les absences depuis **Lucca** (le fichier habituel).
+1. J'exporte les absences depuis **Lucca** (le fichier habituel : `.txt`/`.tsv`
+   tabulé, ou `.csv`, ou `.xlsx` — l'outil détecte le format tout seul).
 2. J'ouvre l'outil et je **dépose ce fichier**.
 3. L'outil fusionne automatiquement les lignes : **une seule ligne par personne
    et par type d'absence**, avec les dates mises bout à bout
    (`10/05 11/05, 20/05 20/05`).
-4. Je **télécharge** le fichier nettoyé, prêt à importer en un clic.
+4. Je vérifie l'aperçu (nb de collaborateurs, lignes fusionnées, éventuels
+   avertissements), puis je **télécharge** le fichier `absences_spaiectacle.tsv`,
+   prêt à importer dans sPAIEctacle.
+
+**Regroupement maladie** : par défaut, les sous-types maladie/accident
+(`AbMa`, `AbMaP`, `AbMaT`) sont regroupés dans `AbMa` (décision V1 — Azaïs
+ajuste à la main si besoin). Une case à cocher permet de **conserver le détail**.
 
 > Le fichier est traité **directement dans le navigateur** : aucune donnée RH
 > n'est envoyée sur un serveur.
@@ -70,15 +77,16 @@ Dans un terminal, à la racine du projet :
 
 ```bash
 npm run build      # construit l'app (~10 s)
-npm run start      # démarre le serveur sur http://localhost:3000
+npm run start      # démarre le serveur (port 3000 en local ; 3002 sur le Mac Studio)
+npm test           # lance les tests unitaires (nettoyeur d'absences)
 ```
 
 Puis dans le navigateur :
 
-| Outil | Adresse |
-|---|---|
-| Dépôt justificatifs | http://localhost:3000/justificatifs |
-| Nettoyeur d'absences | http://localhost:3000/absences |
+| Outil | En local | En production |
+|---|---|---|
+| Dépôt justificatifs | http://localhost:3000/justificatifs | https://justif.bleucitron.app/justificatifs |
+| Nettoyeur d'absences | http://localhost:3000/absences | https://justif.bleucitron.app/absences |
 
 - Sur **/justificatifs**, tu seras redirigé vers la connexion Google
   (compte `@bleucitron.net`) puis ramené sur le formulaire, ton nom pré-rempli.
