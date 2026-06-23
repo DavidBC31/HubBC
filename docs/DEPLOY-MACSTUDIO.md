@@ -189,6 +189,15 @@ node scripts/test-sheet.mjs
 
 Affiche les onglets du classeur et le nombre de lignes. Utile pour vérifier la délégation domaine.
 
+Pour diagnostiquer l'**envoi Gmail** (erreur `unauthorized_client` au dépôt d'un justificatif) :
+
+```bash
+node scripts/test-gmail.mjs                       # vérifie la délégation + l'accès boîte (n'envoie rien)
+node scripts/test-gmail.mjs --send toi@bleucitron.net   # test d'envoi réel
+```
+
+Il affiche le `client_id` à inscrire en délégation domaine et les scopes exacts attendus.
+
 ## 10. Checklist de vérification
 
 - [ ] `pm2 status` → `pointages-app` en ligne (port 3002)

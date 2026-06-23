@@ -107,6 +107,11 @@ export function DepositForm({
           {montantErr && (
             <span style={{ fontSize: 12, color: "var(--orange)" }}>{montantErr}</span>
           )}
+          {!montantErr && type === "TELEPHONE" && (
+            <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+              Saisis le montant total de ta facture ; le remboursement est de 50 %.
+            </span>
+          )}
         </div>
         <div>
           <label className="j-label">Mois de la dépense</label>

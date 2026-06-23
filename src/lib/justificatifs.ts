@@ -19,10 +19,23 @@ export const DOC_TYPES: { id: DocType; label: string }[] = [
   { id: "PASS_NAVIGO", label: "Pass Navigo" },
 ];
 
-/** Plafonds de remboursement par type (en euros). Absent = pas de plafond. */
+/** Plafonds de remboursement par type (en euros). Absent = pas de plafond.
+ *  Téléphone : la personne saisit le montant total de sa facture (jusqu'à 60 €) ;
+ *  seul 50 % est remboursé (cf. TAUX_REMBOURSEMENT, appliqué à l'export). */
 export const PLAFONDS: Partial<Record<DocType, number>> = {
-  TELEPHONE: 30,
+  TELEPHONE: 60,
 };
+
+/** Taux appliqué à l'export sPAIEctacle : la « base » rubrique = montant × taux.
+ *  Téléphone à 50 % (rubrique Ft50) ; les autres types sont remboursés à 100 %. */
+export const TAUX_REMBOURSEMENT: Partial<Record<DocType, number>> = {
+  TELEPHONE: 0.5,
+};
+
+/** Montant effectivement porté dans le CSV d'import (après application du taux). */
+export function baseExport(type: DocType, montant: number): number {
+  return montant * (TAUX_REMBOURSEMENT[type] ?? 1);
+}
 
 /**
  * Correspondance type de dépôt -> rubrique sPAIEctacle (codes vus dans l'export
@@ -154,7 +167,7 @@ export function buildJustificatifsCSV(subs: Submission[]): string {
     lines.push(
       [
         s.matricule ?? "", s.nom, s.prenom, s.mois,
-        rub?.code ?? "", rub?.libelle ?? labelOf(s.type), "1", fmtMontant(s.montant),
+        rub?.code ?? "", rub?.libelle ?? labelOf(s.type), "1", fmtMontant(baseExport(s.type, s.montant)),
       ]
         .map((v) => esc(String(v)))
         .join(";"),
