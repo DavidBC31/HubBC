@@ -31,9 +31,22 @@ le domaine `justif.bleucitron.app` sur le port **3002**.
 
 La racine `/` de `justif.bleucitron.app` redirige automatiquement vers `/justificatifs`.
 
----
+### Fonctionnalités servies par HubBC et leurs dépendances
 
-## 1. Préparation machine
+HubBC expose deux outils (mêmes app/port/domaine, routes différentes). **Leurs
+besoins en secrets diffèrent** — utile pour savoir ce qui est indispensable :
+
+| Route | Outil | Auth (SSO) | Service-account Google | Sheets/Drive | Cron |
+|---|---|---|---|---|---|
+| `/justificatifs` | Dépôt justificatifs → email paie + archivage Drive + CSV | requis | **requis** | requis | archivage nuit |
+| `/absences` | Nettoyeur Lucca → sPAIEctacle | requis (accès) | **aucun** | **aucun** | aucun |
+
+> 🟢 **`/absences` est 100 % côté navigateur** : la transformation tourne dans le
+> client, **aucune donnée RH n'est envoyée au serveur** (RGPD `SI-PRO16.2`). Il
+> ne dépend d'aucun secret Google ni d'aucun cron — il fonctionne dès que l'app
+> est servie. Le seul prérequis est le SSO (si activé) pour réserver l'accès au
+> domaine `@bleucitron.net`. Format d'entrée/sortie documenté dans
+> [`exemples/README.md`](./exemples/README.md).
 
 ```bash
 brew install node git cloudflared
