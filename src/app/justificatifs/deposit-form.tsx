@@ -96,7 +96,10 @@ export function DepositForm({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div>
           <label className="j-label">
-            Montant (€){plafond != null && <span> · max {plafond} €</span>}
+            Montant (€)
+            {plafond != null && (
+              <span> · max {plafond} €{type === "TELEPHONE" && <sup>*</sup>}</span>
+            )}
           </label>
           <input
             className={"j-input" + (montantErr ? " err" : "")}
@@ -107,17 +110,20 @@ export function DepositForm({
           {montantErr && (
             <span style={{ fontSize: 12, color: "var(--orange)" }}>{montantErr}</span>
           )}
-          {!montantErr && type === "TELEPHONE" && (
-            <span style={{ fontSize: 12, color: "var(--text-2)" }}>
-              Saisis le montant total de ta facture ; le remboursement est de 50 %.
-            </span>
-          )}
         </div>
         <div>
           <label className="j-label">Mois de la dépense</label>
           <input className="j-input" type="month" value={mois} onChange={(e) => setMois(e.target.value)} />
         </div>
       </div>
+
+      {type === "TELEPHONE" && (
+        <p style={{ fontSize: 12, color: "var(--text-2)", margin: "-6px 0 0" }}>
+          <sup>*</sup> Bleu Citron prend en charge <strong>50 % de votre facture
+          téléphonique totale</strong>. Indiquez le montant total de la facture
+          (jusqu&apos;à 60 €) ; le remboursement appliqué en paie sera de 50 % de ce montant.
+        </p>
+      )}
 
       {/* Zone de dépôt claire */}
       <div>
