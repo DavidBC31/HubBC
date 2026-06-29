@@ -27,3 +27,6 @@ data/absences_spaiectacle.tsv
 
 # Next.js generated
 next-env.d.ts
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
