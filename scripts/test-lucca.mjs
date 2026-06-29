@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Diagnostic API Lucca — recherche exhaustive de la syntaxe de filtre date Figgo.
+// Diagnostic API Lucca — syntaxe filtre date FiggoLeave (demi-journées).
 // Usage :
 //   node scripts/test-lucca.mjs
-//   node scripts/test-lucca.mjs "/api/v3/leaves?ownerId=1&date=2026-06-01"
+//   node scripts/test-lucca.mjs "/api/v3/leaves?ownerId=1&date=2026-06-01/2026-06-30"
 import fs from "node:fs";
 
 try {
@@ -27,6 +27,10 @@ async function call(path) {
 }
 
 const short = (s, n = 500) => s.length > n ? s.slice(0, n) + "…" : s;
+const detail = r => {
+  if (r.ok) return short(r.text, 600);
+  try { return JSON.parse(r.text)?.detail ?? r.text.slice(0, 200); } catch { return r.text.slice(0, 200); }
+};
 
 const arg = process.argv[2];
 if (arg) {
@@ -43,51 +47,54 @@ console.log(`✓ Auth OK — ownerId de test : ${uid}\n`);
 
 async function probe(label, paths) {
   console.log(`── ${label} ──`);
-  for (const path of paths.filter(Boolean)) {
-    const r = await call(path);
+  for (const p of paths) {
+    const r = await call(p);
     const flag = r.ok ? "✓" : r.status === 404 ? "—" : `⚠️ ${r.status}`;
-    const detail = r.ok
-      ? short(r.text, 400)
-      : (() => { try { return JSON.parse(r.text)?.detail ?? r.text.slice(0, 200); } catch { return r.text.slice(0, 200); } })();
-    console.log(`  ${flag}  ${path.replace(BASE, "")}`);
-    if (r.ok || r.status !== 404) console.log(`         ${detail.replace(/\n/g, " ")}`);
+    console.log(`  ${flag}  ${p.replace(BASE, "")}`);
+    if (r.ok || r.status !== 404) console.log(`         ${detail(r).replace(/\n/g, " ")}`);
   }
   console.log();
 }
 
-const oid = `ownerId=${uid}`;
+const from = "2026-06-01"; const to = "2026-06-30";
 
-// 1) Opérateurs PascalCase (la plupart des APIs Lucca v3 les utilisent ainsi).
-await probe("/api/v3/leaves — PascalCase operators", [
-  `${BASE}/api/v3/leaves?${oid}&date.Between=2026-06-01,2026-06-30&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&date.GreaterThanOrEqual=2026-06-01&date.LowerThanOrEqual=2026-06-30&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&date.GreaterThan=2026-05-31&date.LowerThan=2026-07-01&paging=0,1`,
+// 1) Valeur-range dans le paramètre date (/, |, ..)
+await probe("date= valeur-range", [
+  `${BASE}/api/v3/leaves?ownerId=${uid}&date=${from}/${to}&paging=0,3`,
+  `${BASE}/api/v3/leaves?ownerId=${uid}&date=${from}|${to}&paging=0,3`,
+  `${BASE}/api/v3/leaves?ownerId=${uid}&date=${from},${to}&paging=0,3`,
+  `${BASE}/api/v3/leaves?ownerId=${uid}&date=[${from},${to}]&paging=0,3`,
 ]);
 
-// 2) Paramètres période (year/month ou yearMonth).
-await probe("/api/v3/leaves — params période", [
-  `${BASE}/api/v3/leaves?${oid}&year=2026&month=6&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&year=2026&month=06&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&period=2026-06&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&yearMonth=2026-06&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&dateRange=2026-06-01,2026-06-30&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&date=2026-06&paging=0,1`,
+// 2) Endpoint sub-resource user
+await probe("sous-ressource /api/v3/users/{id}/leaves", [
+  `${BASE}/api/v3/users/${uid}/leaves?paging=0,3`,
+  `${BASE}/api/v3/users/${uid}/leaves?year=2026&month=6&paging=0,3`,
+  `${BASE}/api/v3/users/${uid}/leaves?from=${from}&to=${to}&paging=0,3`,
 ]);
 
-// 3) Séparer les champs date (peut-être que FiggoLeave a startDate et endDate sous un autre nom).
-await probe("/api/v3/leaves — champs de dates alternatifs", [
-  `${BASE}/api/v3/leaves?${oid}&startOn=2026-06-01&endOn=2026-06-30&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&start=2026-06-01&end=2026-06-30&paging=0,1`,
-  `${BASE}/api/v3/leaves?${oid}&beginDate=2026-06-01&endDate=2026-06-30&paging=0,1`,
+// 3) Endpoints alternatifs Figgo
+await probe("endpoints alternatifs Figgo", [
+  `${BASE}/api/v3/leaveSummaries?ownerId=${uid}&year=2026&month=6`,
+  `${BASE}/api/v3/leaveUsages?ownerId=${uid}&year=2026&month=6`,
+  `${BASE}/api/v3/leaveTransactions?ownerId=${uid}&paging=0,3`,
+  `${BASE}/api/v3/figgoLeaves?ownerId=${uid}&paging=0,3`,
+  `${BASE}/figgo/api/v1/leaves?ownerId=${uid}&paging=0,3`,
+  `${BASE}/figgo/api/leaves?ownerId=${uid}&paging=0,3`,
 ]);
 
-// 4) Découverte de schéma Lucca (OpenAPI / Swagger / OData $metadata).
-await probe("Découverte schéma", [
-  `${BASE}/api/v3/$metadata`,
-  `${BASE}/swagger/v1/swagger.json`,
-  `${BASE}/api/docs/swagger.json`,
-  `${BASE}/api/v3/leaves/$metadata`,
-  `${BASE}/api/v3/leaveAccounts?paging=0,5&fields=id,name,code`,
+// 4) Récupérer UN enregistrement connu via son ID formaté.
+// ID format : {ownerId}-{yyyyMMdd}-{AM|PM} → essayer une date récente.
+await probe("accès direct par ID (format {uid}-{date}-{AM|PM})", [
+  `${BASE}/api/v3/leaves/${uid}-20260601-AM`,
+  `${BASE}/api/v3/leaves/${uid}-20260610-AM`,
+  `${BASE}/api/v3/leaves/${uid}-20260610-PM`,
+]);
+
+// 5) leaveAccounts sans le champ code (pour voir la structure disponible).
+await probe("leaveAccounts (sans code)", [
+  `${BASE}/api/v3/leaveAccounts?ownerId=${uid}&paging=0,3&fields=id,name`,
+  `${BASE}/api/v3/leaveAccounts?paging=0,3&fields=id,name`,
 ]);
 
 console.log("ℹ️  Colle la sortie complète.");
