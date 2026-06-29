@@ -1,7 +1,7 @@
 # Déploiement sur Mac Studio (auto-hébergé)
 
 Procédure adaptée au Mac Studio de l'équipe Bleu Citron.
-Chemins spécifiques : `~/Projets/HubBC`.
+Dossier local : `~/Projets/justif` (dépôt GitHub : `DavidBC31/HubBC`).
 
 Pour le contexte complet (Google, Cloudflare, pm2) : voir [DEPLOY-MACMINI.md](./DEPLOY-MACMINI.md) et [SETUP-GOOGLE.md](./SETUP-GOOGLE.md).
 
@@ -26,7 +26,7 @@ le domaine `justif.bleucitron.app` sur le port **3002**.
 |---|---|---|---|
 | 3000 | `hub.bleucitron.app` | portail hub | `hub` |
 | 3001 | `pointages.bleucitron.app` | `~/Projets/pointages` (relances) | `pointages` |
-| **3002** | **`justif.bleucitron.app`** | **`~/Projets/HubBC` (justif)** | **`pointages-app`** |
+| **3002** | **`justif.bleucitron.app`** | **`~/Projets/justif`** | **`justif-app`** |
 | 3003 | `findash.bleucitron.app` | findash | `findash` |
 
 La racine `/` de `justif.bleucitron.app` redirige automatiquement vers `/justificatifs`.
@@ -67,7 +67,7 @@ npm run build
 
 ## 3. Secrets
 
-Créer `~/Projets/HubBC/.env.local` à partir du gabarit :
+Créer `~/Projets/justif/.env.local` à partir du gabarit :
 
 ```bash
 cp .env.local.example .env.local
@@ -93,31 +93,31 @@ CRON_SECRET=$(openssl rand -hex 32)
 Déposer la clé service account :
 
 ```bash
-mkdir -p ~/Projets/HubBC/.secrets
+mkdir -p ~/Projets/justif/.secrets
 # copier le fichier JSON téléchargé depuis Google Cloud Console
-cp /chemin/vers/service-account.json ~/Projets/HubBC/.secrets/service-account.json
-chmod 600 ~/Projets/HubBC/.secrets/service-account.json
+cp /chemin/vers/service-account.json ~/Projets/justif/.secrets/service-account.json
+chmod 600 ~/Projets/justif/.secrets/service-account.json
 ```
 
 > `.env.local` et `.secrets/` sont gitignorés — ils ne doivent **jamais** partir dans git.
 
 ## 4. Service pm2
 
-Le process pm2 de HubBC s'appelle **`pointages-app`** et écoute sur le port
-**3002** (`next start -p 3002`), `cwd = ~/Projets/HubBC`. Adapter `deploy/ecosystem.config.js`
+Le process pm2 de HubBC s'appelle **`justif-app`** et écoute sur le port
+**3002** (`next start -p 3002`), `cwd = ~/Projets/justif`. Adapter `deploy/ecosystem.config.js`
 en conséquence (nom, port, cwd) avant de lancer :
 
 ```bash
-cd ~/Projets/HubBC
+cd ~/Projets/justif
 pm2 start deploy/ecosystem.config.js
 pm2 save
 pm2 startup   # exécuter la commande affichée avec sudo
 ```
 
-Vérification : `pm2 status` → `pointages-app` en ligne.
+Vérification : `pm2 status` → `justif-app` en ligne.
 
 > Après chaque `git pull` + `npm run build`, **redémarrer le bon process** :
-> `pm2 restart pointages-app` (pas `pointages`, qui est le projet relances
+> `pm2 restart justif-app` (pas `pointages`, qui est le projet relances
 > voisin sur 3001). `./deploy/update.sh` s'en charge.
 
 ## 5. Cloudflare Tunnel (HubBC = un domaine, un port)
@@ -160,7 +160,7 @@ HubBC ne sert qu'un domaine. Dans **APIs & Services → Credentials → ton clie
 
 ```bash
 # Copier le modèle, remplacer <CRON_SECRET> par la valeur de .env.local
-crontab ~/Projets/HubBC/deploy/crontab.example
+crontab ~/Projets/justif/deploy/crontab.example
 ```
 
 Tâche planifiée côté HubBC :
@@ -169,21 +169,21 @@ Tâche planifiée côté HubBC :
 > Les relances (lundi 7 h) relèvent du projet voisin `~/Projets/pointages`, pas
 > de HubBC : leur cron vit dans ce dépôt-là.
 
-Logs : `~/Projets/HubBC/cron.log`.
+Logs : `~/Projets/justif/cron.log`.
 
 ## 8. Mettre à jour après un commit
 
 ```bash
-cd ~/Projets/HubBC
+cd ~/Projets/justif
 ./deploy/update.sh
 ```
 
-Le script fait `git pull --ff-only && npm ci && npm run build && pm2 restart pointages-app`.
+Le script fait `git pull --ff-only && npm ci && npm run build && pm2 restart justif-app`.
 
 ## 9. Diagnostic accès Sheets
 
 ```bash
-cd ~/Projets/HubBC
+cd ~/Projets/justif
 node scripts/test-sheet.mjs
 ```
 
@@ -200,7 +200,7 @@ Il affiche le `client_id` à inscrire en délégation domaine et les scopes exac
 
 ## 10. Checklist de vérification
 
-- [ ] `pm2 status` → `pointages-app` en ligne (port 3002)
+- [ ] `pm2 status` → `justif-app` en ligne (port 3002)
 - [ ] `curl -sI -H "Host: justif.bleucitron.app" http://localhost:3002/` → 307 + `x-justif-host: justif.bleucitron.app`
 - [ ] `curl -I http://localhost:3002/justificatifs` → 307 (redirection SSO)
 - [ ] `https://justif.bleucitron.app/` → redirige vers `/justificatifs` → redirige vers Google SSO
@@ -230,7 +230,7 @@ Interprétation :
   navigateur si tu vois encore l'ancienne page : `Cmd+Shift+R`).
 - **Le test local 3002 ne renvoie pas 307 / pas de `x-justif-host`** → pm2 sert
   un ancien build. Reconstruire **et redémarrer le bon process** :
-  `npm run build && pm2 restart pointages-app` (⚠️ `pointages-app`, pas
+  `npm run build && pm2 restart justif-app` (⚠️ `justif-app`, pas
   `pointages` qui est le projet relances voisin sur 3001). `./deploy/update.sh`
   enchaîne pull + build + restart.
 - **Le local 3002 est OK mais le public ne l'est pas, avec `x-justif-host:
