@@ -17,7 +17,9 @@ npm ci
 echo "→ npm run build"
 npm run build
 
-echo "→ pm2 restart justif-app"
-pm2 restart justif-app
+echo "→ pm2 restart pointages-app"
+# Le process pm2 de HubBC s'appelle « pointages-app » (port 3002).
+# NE PAS confondre avec « pointages » (projet relances voisin, ~/Projets/pointages, port 3001).
+pm2 restart pointages-app
 
 echo "✓ Mise à jour terminée."

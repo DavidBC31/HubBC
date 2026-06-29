@@ -1,13 +1,17 @@
-// Configuration pm2 — démarre l'app justif (justificatifs + absences) en service permanent.
+// Configuration pm2 — démarre HubBC (justificatifs + absences) en service permanent.
 // Usage : pm2 start deploy/ecosystem.config.js  (puis `pm2 save` + `pm2 startup`)
-// Adapter `cwd` au chemin réel sur la machine (ex. /Users/serveurit/Projets/justif).
+// Adapter `cwd` au chemin réel sur la machine (ex. /Users/serveurit/Projets/HubBC).
+//
+// Le process s'appelle « pointages-app » et écoute sur le port 3002 : c'est ce
+// que le tunnel route pour justif.bleucitron.app. NE PAS le nommer « pointages »
+// (déjà pris par le projet relances voisin ~/Projets/pointages, port 3001).
 module.exports = {
   apps: [
     {
-      name: "justif-app",
+      name: "pointages-app",
       script: "npm",
       args: "run start", // next start
-      cwd: "/Users/<user>/Projets/justif",
+      cwd: "/Users/<user>/Projets/HubBC",
       env: {
         NODE_ENV: "production",
         PORT: "3002",
