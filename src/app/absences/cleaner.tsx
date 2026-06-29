@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cleanAbsences, toTSV, type CleanResult } from "@/lib/absences";
+import { fetchAbsencesFromLucca } from "./actions";
 
 /** Transforme le fichier déposé en texte tabulé, quel que soit son format.
  *  - .xlsx/.xls binaire  -> SheetJS (import dynamique, 100 % navigateur)
@@ -13,8 +14,14 @@ async function fileToText(f: File): Promise<string> {
   const XLSX = await import("xlsx");
   const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  // FS = "\t" : on réémet du tabulé, ce que cleanAbsences sait lire nativement.
   return XLSX.utils.sheet_to_csv(ws, { FS: "\t", blankrows: false });
+}
+
+function prevMonth(): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 7);
 }
 
 export function Cleaner() {
@@ -24,6 +31,11 @@ export function Cleaner() {
   const [result, setResult] = useState<CleanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Lucca fetch state
+  const [mois, setMois] = useState(prevMonth);
+  const [fetchBusy, setFetchBusy] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   function run(text: string, collapseMaladie: boolean) {
     const res = cleanAbsences(text, collapseMaladie);
@@ -61,43 +73,107 @@ export function Cleaner() {
     }
   }
 
+  async function onFetchLucca() {
+    setFetchError(null);
+    setFetchBusy(true);
+    setResult(null);
+    setRawText(null);
+    setFileName(null);
+    try {
+      const res = await fetchAbsencesFromLucca(mois, collapse);
+      if (!res.ok || !res.tsv) {
+        setFetchError(res.error ?? "Erreur inconnue");
+        return;
+      }
+      // The server returns a TSV already processed by cleanAbsences().
+      // Re-parse it to get the CleanResult for the preview table.
+      const parsed = cleanAbsences(res.tsv, false); // already collapsed server-side
+      setResult(parsed);
+      setRawText(res.tsv);
+      setFileName(`lucca_absences_${mois}.tsv`);
+    } catch (err) {
+      setFetchError((err as Error).message);
+    } finally {
+      setFetchBusy(false);
+    }
+  }
+
   function download() {
-    if (!result) return;
-    const tsv = toTSV(result.header, result.rows);
-    const blob = new Blob([tsv], { type: "text/tab-separated-values;charset=utf-8" });
+    if (!rawText) return;
+    const blob = new Blob([rawText], { type: "text/tab-separated-values;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "absences_spaiectacle.tsv";
+    a.download = fileName ?? "absences_spaiectacle.tsv";
     a.click();
     URL.revokeObjectURL(url);
   }
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-dashed p-6 text-center">
-        <label className="cursor-pointer">
-          <span className="rounded bg-black px-4 py-2 text-sm font-medium text-white">
-            Choisir l&apos;export Lucca (.txt / .tsv / .csv / .xlsx)
-          </span>
-          <input
-            type="file"
-            accept=".tsv,.csv,.txt,.xlsx,.xls,text/plain,text/tab-separated-values"
-            className="hidden"
-            onChange={onFile}
-          />
-        </label>
-        {fileName && (
-          <p className="mt-2 text-sm text-gray-500">
-            Fichier : {fileName}
-            {busy && " — lecture…"}
+      {/* ── Bloc 1 : récupérer depuis Lucca ── */}
+      <section className="rounded-lg border p-5 space-y-4">
+        <h2 className="font-semibold text-sm uppercase tracking-wide text-gray-500">
+          Récupérer depuis Lucca
+        </h2>
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1" htmlFor="mois-picker">
+              Mois de paie
+            </label>
+            <input
+              id="mois-picker"
+              type="month"
+              className="rounded border px-3 py-1.5 text-sm"
+              value={mois}
+              onChange={(e) => setMois(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={onFetchLucca}
+            disabled={fetchBusy || !mois}
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {fetchBusy ? "Récupération…" : "Récupérer les absences"}
+          </button>
+        </div>
+        {fetchError && (
+          <p className="rounded bg-red-100 px-3 py-2 text-sm text-red-800 whitespace-pre-wrap">
+            {fetchError}
           </p>
         )}
-        <p className="mt-2 text-xs text-gray-400">
-          Traitement 100 % local — aucune donnée n&apos;est envoyée au serveur.
-        </p>
-      </div>
+      </section>
 
+      {/* ── Bloc 2 : déposer un fichier export Lucca ── */}
+      <section className="space-y-4">
+        <h2 className="font-semibold text-sm uppercase tracking-wide text-gray-500">
+          Ou déposer un export Lucca
+        </h2>
+        <div className="rounded-lg border border-dashed p-6 text-center">
+          <label className="cursor-pointer">
+            <span className="rounded bg-black px-4 py-2 text-sm font-medium text-white">
+              Choisir l&apos;export Lucca (.txt / .tsv / .csv / .xlsx)
+            </span>
+            <input
+              type="file"
+              accept=".tsv,.csv,.txt,.xlsx,.xls,text/plain,text/tab-separated-values"
+              className="hidden"
+              onChange={onFile}
+            />
+          </label>
+          {fileName && !fetchBusy && (
+            <p className="mt-2 text-sm text-gray-500">
+              Fichier : {fileName}
+              {busy && " — lecture…"}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-gray-400">
+            Traitement 100 % local — aucune donnée n&apos;est envoyée au serveur.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Options ── */}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -112,6 +188,7 @@ export function Cleaner() {
         <p className="rounded bg-red-100 px-3 py-2 text-sm text-red-800">{error}</p>
       )}
 
+      {/* ── Résultat ── */}
       {result && (
         <>
           {result.warnings.length > 0 && (

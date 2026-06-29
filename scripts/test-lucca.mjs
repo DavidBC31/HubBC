@@ -63,20 +63,32 @@ if (!me.ok) { console.error("❌ Réponse inattendue : " + short(me.text)); proc
 console.log("✓ Clé valide. " + short(me.text));
 
 // 2) Sonde des endpoints candidats (découverte). On n'interprète pas encore le contenu.
-console.log("\n[sonde] endpoints candidats (absences / tickets resto) :");
-const candidates = [
+console.log("\n[sonde] endpoints candidats — absences :");
+const absencesCandidates = [
+  "/timmi-absences/api/leaves?limit=1",
   "/api/v3/leaves?limit=1",
   "/api/v3/leaveRequests?limit=1",
   "/api/v3/leaveAccounts?limit=1",
-  "/timmi-absences/api/leaves?limit=1",
   "/api/v3/users/me",
-  "/organization/structure",
 ];
-for (const path of candidates) {
+for (const path of absencesCandidates) {
   const r = await call(path);
   const flag = r.ok ? "✓" : (r.status === 404 ? "—" : "⚠️");
   console.log(`  ${flag} HTTP ${String(r.status).padEnd(3)}  ${path}`);
   if (r.ok) console.log("       " + short(r.text).replace(/\n/g, " "));
 }
 
-console.log("\nℹ️  Donne-moi la sortie : on en déduit l'endpoint exact des absences/TR à brancher.");
+console.log("\n[sonde] endpoints candidats — tickets restaurant :");
+const trCandidates = [
+  "/lunch-vouchers/api/summary?limit=1",
+  "/api/v3/lunchVoucherSummaries?limit=1",
+  "/api/v3/lunchVouchers?limit=1",
+];
+for (const path of trCandidates) {
+  const r = await call(path);
+  const flag = r.ok ? "✓" : (r.status === 404 ? "—" : "⚠️");
+  console.log(`  ${flag} HTTP ${String(r.status).padEnd(3)}  ${path}`);
+  if (r.ok) console.log("       " + short(r.text).replace(/\n/g, " "));
+}
+
+console.log("\nℹ️  Colle la sortie complète ici : on en déduit les endpoints exacts à câbler.");
